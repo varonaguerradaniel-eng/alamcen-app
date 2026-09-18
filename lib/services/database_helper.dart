@@ -1,0 +1,269 @@
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
+import '../models/product.dart';
+import '../models/stock_movement.dart';
+
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('warehouse_elite.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
+  }
+
+  Future<void> _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        barcode TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        cost_price REAL NOT NULL DEFAULT 0,
+        sale_price REAL NOT NULL DEFAULT 0,
+        quantity INTEGER NOT NULL DEFAULT 0,
+        location TEXT NOT NULL DEFAULT '',
+        weight REAL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE stock_movements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+
+    await db.execute(
+        'CREATE INDEX idx_products_barcode ON products(barcode)');
+    await db.execute(
+        'CREATE INDEX idx_movements_product ON stock_movements(product_id)');
+    await db.execute(
+        'CREATE INDEX idx_movements_created ON stock_movements(created_at)');
+  }
+
+  // ===================== PRODUCT CRUD =====================
+
+  Future<int> insertProduct(Product product) async {
+    final db = await database;
+    return await db.insert('products', product.toMap()..remove('id'));
+  }
+
+  Future<Product?> getProductByBarcode(String barcode) async {
+    final db = await database;
+    final maps = await db.query(
+      'products',
+      where: 'barcode = ?',
+      whereArgs: [barcode],
+    );
+    if (maps.isNotEmpty) {
+      return Product.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<Product?> getProductById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return Product.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<Product>> getAllProducts() async {
+    final db = await database;
+    final maps = await db.query('products', orderBy: 'updated_at DESC');
+    return maps.map((m) => Product.fromMap(m)).toList();
+  }
+
+  Future<int> updateProduct(Product product) async {
+    final db = await database;
+    product.updatedAt = DateTime.now();
+    return await db.update(
+      'products',
+      product.toMap(),
+      where: 'id = ?',
+      whereArgs: [product.id],
+    );
+  }
+
+  Future<int> deleteProduct(int id) async {
+    final db = await database;
+    return await db.delete('products', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Product>> getLowStockProducts({int threshold = 25}) async {
+    final db = await database;
+    final maps = await db.query(
+      'products',
+      where: 'quantity <= ?',
+      whereArgs: [threshold],
+      orderBy: 'quantity ASC',
+    );
+    return maps.map((m) => Product.fromMap(m)).toList();
+  }
+
+  // ===================== STOCK MOVEMENTS =====================
+
+  Future<int> insertStockMovement(StockMovement movement) async {
+    final db = await database;
+    return await db.insert('stock_movements', movement.toMap()..remove('id'));
+  }
+
+  Future<List<StockMovement>> getRecentMovements({int limit = 20}) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT sm.*, p.name as product_name, p.barcode as product_barcode
+      FROM stock_movements sm
+      LEFT JOIN products p ON sm.product_id = p.id
+      ORDER BY sm.created_at DESC
+      LIMIT ?
+    ''', [limit]);
+    return maps.map((m) => StockMovement.fromMap(m)).toList();
+  }
+
+  Future<List<StockMovement>> getMovementsByProduct(int productId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT sm.*, p.name as product_name, p.barcode as product_barcode
+      FROM stock_movements sm
+      LEFT JOIN products p ON sm.product_id = p.id
+      WHERE sm.product_id = ?
+      ORDER BY sm.created_at DESC
+    ''', [productId]);
+    return maps.map((m) => StockMovement.fromMap(m)).toList();
+  }
+
+  // ===================== STOCK OPERATIONS =====================
+
+  Future<void> processStockMovement({
+    required Product product,
+    required String type,
+    required int quantity,
+    String? note,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // Insert movement
+      final movement = StockMovement(
+        productId: product.id!,
+        type: type,
+        quantity: quantity,
+        note: note,
+      );
+      await txn.insert('stock_movements', movement.toMap()..remove('id'));
+
+      // Update product quantity
+      int newQuantity = product.quantity;
+      switch (type) {
+        case 'mal_kabul':
+          newQuantity += quantity;
+          break;
+        case 'sevkiyat':
+        case 'fire_iade':
+          newQuantity -= quantity;
+          if (newQuantity < 0) newQuantity = 0;
+          break;
+        case 'sayim':
+          newQuantity = quantity; // Direct set for counting
+          break;
+      }
+
+      await txn.update(
+        'products',
+        {
+          'quantity': newQuantity,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [product.id],
+      );
+    });
+  }
+
+  // ===================== DASHBOARD STATS =====================
+
+  Future<Map<String, dynamic>> getTodayStats() async {
+    final db = await database;
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    final inboundResult = await db.rawQuery('''
+      SELECT COALESCE(SUM(quantity), 0) as total
+      FROM stock_movements
+      WHERE type = 'mal_kabul' AND created_at LIKE '$todayStr%'
+    ''');
+
+    final outboundResult = await db.rawQuery('''
+      SELECT COALESCE(SUM(quantity), 0) as total
+      FROM stock_movements
+      WHERE type IN ('sevkiyat', 'fire_iade') AND created_at LIKE '$todayStr%'
+    ''');
+
+    final lowStockResult = await db.rawQuery('''
+      SELECT COUNT(*) as total FROM products WHERE quantity <= 25
+    ''');
+
+    return {
+      'inbound': (inboundResult.first['total'] as num).toInt(),
+      'outbound': (outboundResult.first['total'] as num).toInt(),
+      'lowStock': (lowStockResult.first['total'] as num).toInt(),
+    };
+  }
+
+  // ===================== BULK INSERT =====================
+
+  Future<int> bulkInsertProducts(List<Product> products) async {
+    final db = await database;
+    int count = 0;
+    await db.transaction((txn) async {
+      for (final product in products) {
+        try {
+          await txn.insert(
+            'products',
+            product.toMap()..remove('id'),
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+          count++;
+        } catch (e) {
+          debugPrint('Bulk insert error for ${product.barcode}: $e');
+        }
+      }
+    });
+    return count;
+  }
+
+  Future<void> close() async {
+    final db = await database;
+    db.close();
+    _database = null;
+  }
+}
