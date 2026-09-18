@@ -122,7 +122,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-
   Future<void> _exportInventory() async {
     final result = await XlsxImportService.exportProducts(languageCode: context.read<AppLanguage>().code);
     if (mounted) {
@@ -137,6 +136,47 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<void> _exportMovements() async {
     final result = await XlsxImportService.exportMovements(languageCode: context.read<AppLanguage>().code);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success ? AppColors.primary : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
+  Future<void> _exportFullBackup() async {
+    final result = await XlsxImportService.exportFullBackup(languageCode: context.read<AppLanguage>().code);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success ? AppColors.primary : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
+  Future<void> _restoreFullBackup() async {
+    final language = context.read<AppLanguage>();
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(language.restoreBackupTitle, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.onSurface)),
+      content: Text(language.restoreBackupWarning, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(language.cancel)),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+          child: Text(language.restoreAction),
+        ),
+      ],
+    ));
+    if (confirmed != true) return;
+
+    final result = await XlsxImportService.restoreFullBackup(languageCode: language.code);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(result.message),
@@ -279,6 +319,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     _buildExcelAction(Icons.inventory_2_outlined, language.exportInventory, _exportInventory),
                     const SizedBox(height: 12),
                     _buildExcelAction(Icons.receipt_long, language.exportMovements, _exportMovements),
+                    const SizedBox(height: 12),
+                    _buildExcelAction(Icons.backup, language.exportFullBackup, _exportFullBackup),
+                    const SizedBox(height: 12),
+                    _buildExcelAction(Icons.restore, language.restoreFullBackup, _restoreFullBackup),
                   ]),
                 ),
               ]),
@@ -289,7 +333,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ]),
     );
   }
-
 
   Widget _buildExcelAction(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(

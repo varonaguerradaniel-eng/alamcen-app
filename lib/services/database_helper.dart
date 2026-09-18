@@ -176,7 +176,6 @@ class DatabaseHelper {
     return maps.map((m) => StockMovement.fromMap(m)).toList();
   }
 
-
   Future<List<StockMovement>> getAllMovements() async {
     final db = await database;
     final maps = await db.rawQuery('''
@@ -299,6 +298,46 @@ class DatabaseHelper {
       }
     });
     return count;
+  }
+
+  Future<Map<String, int>> restoreFullBackup({
+    required List<Product> products,
+    required List<StockMovement> movements,
+  }) async {
+    final db = await database;
+    var productCount = 0;
+    var movementCount = 0;
+    await db.transaction((txn) async {
+      await txn.delete('stock_movements');
+      await txn.delete('products');
+
+      final productIdsByBarcode = <String, int>{};
+      for (final product in products) {
+        final normalizedProduct = _productWithNormalizedBarcode(product);
+        final id = await txn.insert('products', normalizedProduct.toMap()..remove('id'));
+        productIdsByBarcode[_normalizeBarcode(normalizedProduct.barcode).toUpperCase()] = id;
+        productCount++;
+      }
+
+      for (final movement in movements) {
+        final barcode = movement.productBarcode == null ? '' : _normalizeBarcode(movement.productBarcode!).toUpperCase();
+        final productId = productIdsByBarcode[barcode];
+        if (productId == null) continue;
+        final restoredMovement = StockMovement(
+          productId: productId,
+          type: movement.type,
+          quantity: movement.quantity,
+          stockBefore: movement.stockBefore,
+          stockAfter: movement.stockAfter,
+          note: movement.note,
+          createdAt: movement.createdAt,
+        );
+        await txn.insert('stock_movements', restoredMovement.toMap()..remove('id'));
+        movementCount++;
+      }
+    });
+
+    return {'products': productCount, 'movements': movementCount};
   }
 
   Future<void> close() async {

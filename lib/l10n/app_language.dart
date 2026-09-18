@@ -153,6 +153,11 @@ class AppLanguage extends ChangeNotifier {
   String get downloadExcelTemplate => isSpanish ? 'Descargar plantilla Excel' : 'Download Excel Template';
   String get exportInventory => isSpanish ? 'Exportar inventario' : 'Export Inventory';
   String get exportMovements => isSpanish ? 'Exportar movimientos' : 'Export Movements';
+  String get exportFullBackup => isSpanish ? 'Exportar respaldo completo' : 'Export Full Backup';
+  String get restoreFullBackup => isSpanish ? 'Restaurar respaldo completo' : 'Restore Full Backup';
+  String get restoreBackupTitle => isSpanish ? 'Restaurar respaldo' : 'Restore Backup';
+  String get restoreBackupWarning => isSpanish ? 'Esto reemplazara el inventario y los movimientos actuales con el archivo seleccionado. Exporte un respaldo antes de continuar.' : 'This will replace the current inventory and movements with the selected file. Export a backup before continuing.';
+  String get restoreAction => isSpanish ? 'Restaurar' : 'Restore';
   String get movementDetails => isSpanish ? 'Detalle del movimiento' : 'Movement Details';
   String get movementAction => isSpanish ? 'Que se hizo' : 'Action';
   String get date => isSpanish ? 'Fecha' : 'Date';
