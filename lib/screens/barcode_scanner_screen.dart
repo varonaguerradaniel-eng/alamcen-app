@@ -57,25 +57,26 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   }
 
   void _onBarcodeDetected(String barcode) async {
-    if (_isProcessing) return;
+    final scannedBarcode = barcode.trim();
+    if (scannedBarcode.isEmpty || _isProcessing) return;
     setState(() => _isProcessing = true);
 
     _cameraController?.stop();
 
     // If caller just wants the barcode string back (e.g. add product screen)
     if (widget.returnBarcodeOnly) {
-      if (mounted) Navigator.pop(context, barcode);
+      if (mounted) Navigator.pop(context, scannedBarcode);
       return;
     }
 
-    final product = await DatabaseHelper.instance.getProductByBarcode(barcode);
+    final product = await DatabaseHelper.instance.getProductByBarcode(scannedBarcode);
 
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ActionSelectionScreen(
-            barcode: barcode,
+            barcode: scannedBarcode,
             product: product,
           ),
         ),
@@ -400,5 +401,3 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     );
   }
 }
-
-

@@ -64,19 +64,27 @@ class DatabaseHelper {
         'CREATE INDEX idx_movements_created ON stock_movements(created_at)');
   }
 
+  String _normalizeBarcode(String barcode) => barcode.trim();
+
+  Product _productWithNormalizedBarcode(Product product) {
+    return product.copyWith(barcode: _normalizeBarcode(product.barcode));
+  }
+
   // ===================== PRODUCT CRUD =====================
 
   Future<int> insertProduct(Product product) async {
     final db = await database;
-    return await db.insert('products', product.toMap()..remove('id'));
+    final normalizedProduct = _productWithNormalizedBarcode(product);
+    return await db.insert('products', normalizedProduct.toMap()..remove('id'));
   }
 
   Future<Product?> getProductByBarcode(String barcode) async {
     final db = await database;
+    final normalizedBarcode = _normalizeBarcode(barcode);
     final maps = await db.query(
       'products',
-      where: 'barcode = ?',
-      whereArgs: [barcode],
+      where: 'UPPER(TRIM(barcode)) = UPPER(?)',
+      whereArgs: [normalizedBarcode],
     );
     if (maps.isNotEmpty) {
       return Product.fromMap(maps.first);
@@ -106,9 +114,10 @@ class DatabaseHelper {
   Future<int> updateProduct(Product product) async {
     final db = await database;
     product.updatedAt = DateTime.now();
+    final normalizedProduct = _productWithNormalizedBarcode(product);
     return await db.update(
       'products',
-      product.toMap(),
+      normalizedProduct.toMap(),
       where: 'id = ?',
       whereArgs: [product.id],
     );
@@ -249,7 +258,7 @@ class DatabaseHelper {
         try {
           await txn.insert(
             'products',
-            product.toMap()..remove('id'),
+            _productWithNormalizedBarcode(product).toMap()..remove('id'),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
           count++;

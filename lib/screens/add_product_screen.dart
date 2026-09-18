@@ -32,7 +32,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialBarcode != null) _barcodeCtrl.text = widget.initialBarcode!;
+    if (widget.initialBarcode != null) _barcodeCtrl.text = widget.initialBarcode!.trim();
   }
 
   @override
@@ -304,7 +304,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               MaterialPageRoute(builder: (_) => const BarcodeScannerScreen(returnBarcodeOnly: true)),
             );
             if (result != null) {
-              setState(() => _barcodeCtrl.text = result);
+              setState(() => _barcodeCtrl.text = result.trim());
             }
           },
           child: Container(margin: const EdgeInsets.all(8), width: 40, height: 40,
@@ -315,14 +315,3 @@ class _AddProductScreenState extends State<AddProductScreen> {
       )),
   ]);
 }
-
-
-
-
-
-
-
-
-
-
-
