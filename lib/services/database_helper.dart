@@ -22,8 +22,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -33,6 +34,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         barcode TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
+        spanish_name TEXT NOT NULL DEFAULT '',
         category TEXT NOT NULL,
         cost_price REAL NOT NULL DEFAULT 0,
         sale_price REAL NOT NULL DEFAULT 0,
@@ -64,10 +66,20 @@ class DatabaseHelper {
         'CREATE INDEX idx_movements_created ON stock_movements(created_at)');
   }
 
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE products ADD COLUMN spanish_name TEXT NOT NULL DEFAULT ''");
+    }
+  }
+
   String _normalizeBarcode(String barcode) => barcode.trim();
 
   Product _productWithNormalizedBarcode(Product product) {
-    return product.copyWith(barcode: _normalizeBarcode(product.barcode));
+    return product.copyWith(
+      barcode: _normalizeBarcode(product.barcode),
+      name: product.name.trim(),
+      spanishName: product.spanishName.trim(),
+    );
   }
 
   // ===================== PRODUCT CRUD =====================

@@ -129,9 +129,11 @@ class AppLanguage extends ChangeNotifier {
   String productSaveError(Object e) => isSpanish ? 'Ocurrio un error: $e' : 'An error occurred: $e';
   String templateSaved(String path) => isSpanish ? 'Plantilla guardada: $path' : 'Template saved: $path';
   String get templateNotCreated => isSpanish ? 'No se pudo crear la plantilla' : 'Template could not be created';
-  String get productNameLabel => isSpanish ? 'NOMBRE DEL PRODUCTO' : 'PRODUCT NAME';
-  String get productNameHint => isSpanish ? 'ej. Motor servo industrial' : 'e.g. Industrial Servo Motor';
-  String get productNameRequired => isSpanish ? 'El nombre del producto es obligatorio' : 'Product name is required';
+  String get productNameLabel => isSpanish ? 'NOMBRE EN INGLES' : 'ENGLISH NAME';
+  String get productNameHint => isSpanish ? 'ej. Industrial Servo Motor' : 'e.g. Industrial Servo Motor';
+  String get productNameRequired => isSpanish ? 'El nombre en ingles es obligatorio' : 'English name is required';
+  String get spanishProductNameLabel => isSpanish ? 'NOMBRE EN ESPANOL' : 'SPANISH NAME';
+  String get spanishProductNameHint => isSpanish ? 'ej. Motor servo industrial' : 'e.g. Motor servo industrial';
   String get categoryLabel => isSpanish ? 'CATEGORIA' : 'CATEGORY';
   String get initialQuantity => isSpanish ? 'CANTIDAD INICIAL' : 'INITIAL QUANTITY';
   String get costPriceLabel => isSpanish ? 'COSTO' : 'COST PRICE';
@@ -175,7 +177,7 @@ class AppLanguage extends ChangeNotifier {
   String get lowStock => isSpanish ? 'Stock bajo' : 'Low Stock';
   String get outOfStock => isSpanish ? 'Sin stock' : 'Out of Stock';
   String get newProduct => isSpanish ? 'Nuevo producto' : 'New Product';
-  String get searchProductsHint => isSpanish ? 'Buscar por producto, codigo o categoria...' : 'Search product name, barcode or category...';
+  String get searchProductsHint => isSpanish ? 'Buscar por nombre en espanol, ingles, codigo o categoria...' : 'Search Spanish name, English name, barcode or category...';
   String get sortByName => isSpanish ? 'Por nombre' : 'By Name';
   String get sortByStock => isSpanish ? 'Por stock' : 'By Stock';
   String get sortByUpdated => isSpanish ? 'Ultima actualizacion' : 'Last Updated';

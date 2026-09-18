@@ -18,6 +18,7 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _spanishNameCtrl = TextEditingController();
   final _barcodeCtrl = TextEditingController();
   final _qtyCtrl = TextEditingController(text: '0');
   final _costCtrl = TextEditingController(text: '0');
@@ -37,7 +38,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _barcodeCtrl.dispose(); _qtyCtrl.dispose();
+    _nameCtrl.dispose(); _spanishNameCtrl.dispose(); _barcodeCtrl.dispose(); _qtyCtrl.dispose();
     _costCtrl.dispose(); _saleCtrl.dispose(); _locationCtrl.dispose(); _weightCtrl.dispose();
     super.dispose();
   }
@@ -73,6 +74,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final product = Product(
         barcode: _barcodeCtrl.text.trim(),
         name: _nameCtrl.text.trim(),
+        spanishName: _spanishNameCtrl.text.trim(),
         category: _category,
         quantity: int.tryParse(_qtyCtrl.text) ?? 0,
         costPrice: double.tryParse(_costCtrl.text) ?? 0,
@@ -161,6 +163,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Form(key: _formKey, child: Column(children: [
               _buildField(language.productNameLabel, _nameCtrl, language.productNameHint,
                 validator: (v) => v == null || v.isEmpty ? language.productNameRequired : null),
+              const SizedBox(height: 20),
+              _buildField(language.spanishProductNameLabel, _spanishNameCtrl, language.spanishProductNameHint),
               const SizedBox(height: 20),
               _buildDropdown(language),
               const SizedBox(height: 20),

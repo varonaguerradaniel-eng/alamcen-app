@@ -2,6 +2,7 @@ class Product {
   int? id;
   String barcode;
   String name;
+  String spanishName;
   String category;
   double costPrice;
   double salePrice;
@@ -15,6 +16,7 @@ class Product {
     this.id,
     required this.barcode,
     required this.name,
+    this.spanishName = '',
     required this.category,
     required this.costPrice,
     required this.salePrice,
@@ -31,6 +33,7 @@ class Product {
       'id': id,
       'barcode': barcode,
       'name': name,
+      'spanish_name': spanishName,
       'category': category,
       'cost_price': costPrice,
       'sale_price': salePrice,
@@ -47,6 +50,7 @@ class Product {
       id: map['id'] as int?,
       barcode: map['barcode'] as String,
       name: map['name'] as String,
+      spanishName: map['spanish_name'] as String? ?? '',
       category: map['category'] as String,
       costPrice: (map['cost_price'] as num).toDouble(),
       salePrice: (map['sale_price'] as num).toDouble(),
@@ -65,6 +69,7 @@ class Product {
     int? id,
     String? barcode,
     String? name,
+    String? spanishName,
     String? category,
     double? costPrice,
     double? salePrice,
@@ -78,6 +83,7 @@ class Product {
       id: id ?? this.id,
       barcode: barcode ?? this.barcode,
       name: name ?? this.name,
+      spanishName: spanishName ?? this.spanishName,
       category: category ?? this.category,
       costPrice: costPrice ?? this.costPrice,
       salePrice: salePrice ?? this.salePrice,

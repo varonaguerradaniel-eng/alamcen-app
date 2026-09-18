@@ -64,6 +64,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       
       if (q.isEmpty) return true;
       return p.name.toLowerCase().contains(q) ||
+          p.spanishName.toLowerCase().contains(q) ||
           p.barcode.toLowerCase().contains(q) ||
           p.category.toLowerCase().contains(q);
     }).toList();
@@ -276,7 +277,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Info
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
+            if (p.spanishName.trim().isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(p.spanishName, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.profitGreenText)),
+            ],
             const SizedBox(height: 4),
             Row(children: [
               Container(

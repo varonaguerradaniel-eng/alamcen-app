@@ -42,7 +42,7 @@ class XlsxImportService {
         );
       }
 
-      // Expected columns: Codigo, Producto, Categoria, Cantidad, Costo, Precio de venta, Ubicacion, Peso
+      // Expected columns: Codigo, Producto, Producto Espanol, Categoria, Cantidad, Costo, Precio de venta, Ubicacion, Peso
       final products = <Product>[];
       for (int i = 1; i < sheet.rows.length; i++) {
         final row = sheet.rows[i];
@@ -51,17 +51,19 @@ class XlsxImportService {
         try {
           final barcode = _cellToString(row[0]?.value);
           final name = row.length > 1 ? _cellToString(row[1]?.value) : '';
-          final category = row.length > 2 ? _cellToString(row[2]?.value) : 'Genel';
-          final quantity = row.length > 3 ? _cellToInt(row[3]?.value) : 0;
-          final costPrice = row.length > 4 ? _cellToDouble(row[4]?.value) : 0.0;
-          final salePrice = row.length > 5 ? _cellToDouble(row[5]?.value) : 0.0;
-          final location = row.length > 6 ? _cellToString(row[6]?.value) : '';
-          final weight = row.length > 7 ? _cellToDoubleNullable(row[7]?.value) : null;
+          final spanishName = row.length > 2 ? _cellToString(row[2]?.value) : '';
+          final category = row.length > 3 ? _cellToString(row[3]?.value) : 'Genel';
+          final quantity = row.length > 4 ? _cellToInt(row[4]?.value) : 0;
+          final costPrice = row.length > 5 ? _cellToDouble(row[5]?.value) : 0.0;
+          final salePrice = row.length > 6 ? _cellToDouble(row[6]?.value) : 0.0;
+          final location = row.length > 7 ? _cellToString(row[7]?.value) : '';
+          final weight = row.length > 8 ? _cellToDoubleNullable(row[8]?.value) : null;
 
           if (barcode.isNotEmpty && name.isNotEmpty) {
             products.add(Product(
               barcode: barcode,
               name: name,
+              spanishName: spanishName,
               category: category,
               quantity: quantity,
               costPrice: costPrice,
@@ -138,6 +140,7 @@ class XlsxImportService {
       sheet.appendRow([
         TextCellValue('Codigo'),
         TextCellValue('Producto'),
+        TextCellValue('Producto Espanol'),
         TextCellValue('Categoria'),
         TextCellValue('Cantidad'),
         TextCellValue('Costo'),
@@ -149,7 +152,8 @@ class XlsxImportService {
       // Example row
       sheet.appendRow([
         TextCellValue('8690000000001'),
-        TextCellValue('Producto de ejemplo'),
+        TextCellValue('Industrial Servo Motor'),
+        TextCellValue('Motor servo industrial'),
         TextCellValue('Genel'),
         IntCellValue(100),
         DoubleCellValue(150.00),
