@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -52,6 +52,8 @@ class DatabaseHelper {
         product_id INTEGER NOT NULL,
         type TEXT NOT NULL,
         quantity INTEGER NOT NULL,
+        stock_before INTEGER,
+        stock_after INTEGER,
         note TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (product_id) REFERENCES products(id)
@@ -69,6 +71,10 @@ class DatabaseHelper {
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute("ALTER TABLE products ADD COLUMN spanish_name TEXT NOT NULL DEFAULT ''");
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE stock_movements ADD COLUMN stock_before INTEGER');
+      await db.execute('ALTER TABLE stock_movements ADD COLUMN stock_after INTEGER');
     }
   }
 
@@ -161,7 +167,7 @@ class DatabaseHelper {
   Future<List<StockMovement>> getRecentMovements({int limit = 20}) async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT sm.*, p.name as product_name, p.barcode as product_barcode
+      SELECT sm.*, p.name as product_name, p.barcode as product_barcode, p.spanish_name as product_spanish_name, p.location as product_location
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       ORDER BY sm.created_at DESC
@@ -170,10 +176,22 @@ class DatabaseHelper {
     return maps.map((m) => StockMovement.fromMap(m)).toList();
   }
 
+
+  Future<List<StockMovement>> getAllMovements() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT sm.*, p.name as product_name, p.barcode as product_barcode, p.spanish_name as product_spanish_name, p.location as product_location
+      FROM stock_movements sm
+      LEFT JOIN products p ON sm.product_id = p.id
+      ORDER BY sm.created_at DESC
+    ''');
+    return maps.map((m) => StockMovement.fromMap(m)).toList();
+  }
+
   Future<List<StockMovement>> getMovementsByProduct(int productId) async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT sm.*, p.name as product_name, p.barcode as product_barcode
+      SELECT sm.*, p.name as product_name, p.barcode as product_barcode, p.spanish_name as product_spanish_name, p.location as product_location
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       WHERE sm.product_id = ?
@@ -192,17 +210,8 @@ class DatabaseHelper {
   }) async {
     final db = await database;
     await db.transaction((txn) async {
-      // Insert movement
-      final movement = StockMovement(
-        productId: product.id!,
-        type: type,
-        quantity: quantity,
-        note: note,
-      );
-      await txn.insert('stock_movements', movement.toMap()..remove('id'));
-
-      // Update product quantity
-      int newQuantity = product.quantity;
+      final stockBefore = product.quantity;
+      int newQuantity = stockBefore;
       switch (type) {
         case 'mal_kabul':
           newQuantity += quantity;
@@ -216,6 +225,16 @@ class DatabaseHelper {
           newQuantity = quantity; // Direct set for counting
           break;
       }
+
+      final movement = StockMovement(
+        productId: product.id!,
+        type: type,
+        quantity: quantity,
+        stockBefore: stockBefore,
+        stockAfter: newQuantity,
+        note: note,
+      );
+      await txn.insert('stock_movements', movement.toMap()..remove('id'));
 
       await txn.update(
         'products',

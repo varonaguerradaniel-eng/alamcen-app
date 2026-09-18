@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
+import '../models/stock_movement.dart';
 import 'database_helper.dart';
 
 class XlsxImportService {
@@ -99,6 +101,163 @@ class XlsxImportService {
         message: _msg(languageCode, 'Error al importar: $e', 'Import error: $e'),
         importedCount: 0,
       );
+    }
+  }
+
+
+  static Future<XlsxExportResult> exportProducts({String languageCode = 'es'}) async {
+    try {
+      final products = await DatabaseHelper.instance.getAllProducts();
+      final excel = Excel.createExcel();
+      final sheet = excel['Inventario'];
+
+      sheet.appendRow([
+        TextCellValue('Codigo'),
+        TextCellValue('Producto Ingles'),
+        TextCellValue('Producto Espanol'),
+        TextCellValue('Categoria'),
+        TextCellValue('Cantidad'),
+        TextCellValue('Costo'),
+        TextCellValue('Precio de venta'),
+        TextCellValue('Ubicacion'),
+        TextCellValue('Peso (kg)'),
+        TextCellValue('Creado'),
+        TextCellValue('Actualizado'),
+      ]);
+
+      for (final product in products) {
+        sheet.appendRow([
+          TextCellValue(product.barcode),
+          TextCellValue(product.name),
+          TextCellValue(product.spanishName),
+          TextCellValue(product.category),
+          IntCellValue(product.quantity),
+          DoubleCellValue(product.costPrice),
+          DoubleCellValue(product.salePrice),
+          TextCellValue(product.location),
+          product.weight == null ? TextCellValue('') : DoubleCellValue(product.weight!),
+          TextCellValue(_formatDate(product.createdAt)),
+          TextCellValue(_formatDate(product.updatedAt)),
+        ]);
+      }
+
+      final path = await _saveWorkbook(excel, 'inventario_${_timestamp()}.xlsx', languageCode);
+      if (path == null) {
+        return XlsxExportResult(success: false, message: _msg(languageCode, 'Exportacion cancelada.', 'Export cancelled.'));
+      }
+      return XlsxExportResult(
+        success: true,
+        message: _msg(languageCode, 'Inventario exportado: $path', 'Inventory exported: $path'),
+        path: path,
+      );
+    } catch (e) {
+      return XlsxExportResult(success: false, message: _msg(languageCode, 'Error al exportar inventario: $e', 'Inventory export error: $e'));
+    }
+  }
+
+  static Future<XlsxExportResult> exportMovements({String languageCode = 'es'}) async {
+    try {
+      final movements = await DatabaseHelper.instance.getAllMovements();
+      final excel = Excel.createExcel();
+      final sheet = excel['Movimientos'];
+
+      sheet.appendRow([
+        TextCellValue('Fecha'),
+        TextCellValue('Hora'),
+        TextCellValue('Operacion'),
+        TextCellValue('Producto Ingles'),
+        TextCellValue('Producto Espanol'),
+        TextCellValue('Codigo'),
+        TextCellValue('Cantidad'),
+        TextCellValue('Stock antes'),
+        TextCellValue('Stock despues'),
+        TextCellValue('Ubicacion'),
+        TextCellValue('Nota'),
+      ]);
+
+      for (final movement in movements) {
+        sheet.appendRow([
+          TextCellValue(_formatOnlyDate(movement.createdAt)),
+          TextCellValue(_formatOnlyTime(movement.createdAt)),
+          TextCellValue(_movementTypeLabel(movement.type, languageCode)),
+          TextCellValue(movement.productName ?? ''),
+          TextCellValue(movement.productSpanishName ?? ''),
+          TextCellValue(movement.productBarcode ?? ''),
+          IntCellValue(movement.quantity),
+          movement.stockBefore == null ? TextCellValue('') : IntCellValue(movement.stockBefore!),
+          movement.stockAfter == null ? TextCellValue('') : IntCellValue(movement.stockAfter!),
+          TextCellValue(movement.productLocation ?? ''),
+          TextCellValue(movement.note ?? ''),
+        ]);
+      }
+
+      final path = await _saveWorkbook(excel, 'movimientos_${_timestamp()}.xlsx', languageCode);
+      if (path == null) {
+        return XlsxExportResult(success: false, message: _msg(languageCode, 'Exportacion cancelada.', 'Export cancelled.'));
+      }
+      return XlsxExportResult(
+        success: true,
+        message: _msg(languageCode, 'Movimientos exportados: $path', 'Movements exported: $path'),
+        path: path,
+      );
+    } catch (e) {
+      return XlsxExportResult(success: false, message: _msg(languageCode, 'Error al exportar movimientos: $e', 'Movements export error: $e'));
+    }
+  }
+
+  static Future<String?> _saveWorkbook(Excel excel, String fileName, String languageCode) async {
+    if (excel.tables.containsKey('Sheet1')) {
+      excel.delete('Sheet1');
+    }
+    final fileBytes = excel.save();
+    if (fileBytes == null) return null;
+    final bytes = Uint8List.fromList(fileBytes);
+
+    final savedPath = await FilePicker.platform.saveFile(
+      dialogTitle: _msg(languageCode, 'Guardar archivo Excel', 'Save Excel file'),
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      bytes: bytes,
+    );
+    if (savedPath == null) return null;
+
+    return savedPath;
+  }
+
+  static String _timestamp() {
+    final now = DateTime.now();
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}';
+  }
+
+  static String _formatDate(DateTime date) {
+    return '${_formatOnlyDate(date)} ${_formatOnlyTime(date)}';
+  }
+
+  static String _formatOnlyDate(DateTime date) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${date.year}-${two(date.month)}-${two(date.day)}';
+  }
+
+  static String _formatOnlyTime(DateTime date) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  static String _movementTypeLabel(String type, String languageCode) {
+    final isEnglish = languageCode == 'en';
+    switch (type) {
+      case 'mal_kabul':
+        return isEnglish ? 'Stock In' : 'Entrada de stock';
+      case 'sevkiyat':
+        return isEnglish ? 'Dispatch' : 'Salida';
+      case 'sayim':
+        return isEnglish ? 'Count' : 'Conteo';
+      case 'fire_iade':
+        return isEnglish ? 'Waste / Return' : 'Mal estado / Devolucion';
+      default:
+        return type;
     }
   }
 
@@ -213,3 +372,15 @@ class XlsxImportResult {
 
 
 
+
+class XlsxExportResult {
+  final bool success;
+  final String message;
+  final String? path;
+
+  XlsxExportResult({
+    required this.success,
+    required this.message,
+    this.path,
+  });
+}

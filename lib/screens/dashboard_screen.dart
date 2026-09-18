@@ -225,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(language.recentMovements, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
-        TextButton(onPressed: () {}, child: Text(language.seeAll, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary))),
+        TextButton(onPressed: () => _showAllMovements(language), child: Text(language.seeAll, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary))),
       ]),
       const SizedBox(height: 8),
       Container(
@@ -238,6 +238,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : Column(children: _recentMovements.map((m) => _buildActivityItem(m, language)).toList()),
       ),
     ]);
+  }
+
+
+
+  Future<void> _showAllMovements(AppLanguage language) async {
+    final movements = await DatabaseHelper.instance.getAllMovements();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Column(children: [
+          Row(children: [
+            Expanded(child: Text(language.recentMovements, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.onSurface))),
+            IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant)),
+          ]),
+          const SizedBox(height: 8),
+          Expanded(child: movements.isEmpty
+              ? Center(child: Text(language.noMovementsYet, style: const TextStyle(color: AppColors.onSurfaceVariant)))
+              : ListView.builder(
+                  itemCount: movements.length,
+                  itemBuilder: (_, index) => _buildActivityItem(movements[index], language),
+                )),
+        ]),
+      )),
+    );
+  }
+
+  void _showMovementDetails(StockMovement movement, AppLanguage language) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(movement.createdAt);
+    final timeStr = DateFormat('HH:mm').format(movement.createdAt);
+    final stockBefore = movement.stockBefore?.toString() ?? language.none;
+    final stockAfter = movement.stockAfter?.toString() ?? language.none;
+    final note = movement.note != null && movement.note!.trim().isNotEmpty ? movement.note!.trim() : language.none;
+    final location = movement.productLocation != null && movement.productLocation!.trim().isNotEmpty
+        ? movement.productLocation!.trim()
+        : language.locationNotSpecified;
+
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(language.movementDetails, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.onSurface)),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _detailRow(language.movementAction, language.movementTypeLabel(movement.type)),
+        _detailRow(language.products, movement.productName ?? language.productFallback),
+        if (movement.productSpanishName != null && movement.productSpanishName!.trim().isNotEmpty)
+          _detailRow(language.spanishProductNameLabel, movement.productSpanishName!.trim()),
+        _detailRow(language.barcode, movement.productBarcode ?? language.none),
+        _detailRow(language.quantity, '${movement.quantity} ${language.units}'),
+        _detailRow(language.stockBefore, stockBefore),
+        _detailRow(language.stockAfter, stockAfter),
+        _detailRow(language.date, dateStr),
+        _detailRow(language.time, timeStr),
+        _detailRow(language.locationLabel, location),
+        _detailRow(language.note, note),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(language.ok, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary))),
+      ],
+    ));
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.onSurfaceVariant))),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.onSurface))),
+      ]),
+    );
   }
 
   Widget _buildActivityItem(StockMovement movement, AppLanguage language) {
@@ -269,12 +341,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final timeStr = DateFormat('HH:mm').format(movement.createdAt);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)]),
-      child: Row(children: [
+    return InkWell(
+      onTap: () => _showMovementDetails(movement, language),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)]),
+        child: Row(children: [
         Container(width: 48, height: 48,
           decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: AppColors.onSecondaryContainer, size: 22)),
@@ -289,7 +364,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 2),
           Text(timeStr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: -0.3, color: AppColors.onSurfaceVariant)),
         ]),
-      ]),
+        ]),
+      ),
     );
   }
 }

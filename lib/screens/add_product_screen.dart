@@ -122,6 +122,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
+
+  Future<void> _exportInventory() async {
+    final result = await XlsxImportService.exportProducts(languageCode: context.read<AppLanguage>().code);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success ? AppColors.primary : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
+  Future<void> _exportMovements() async {
+    final result = await XlsxImportService.exportMovements(languageCode: context.read<AppLanguage>().code);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success ? AppColors.primary : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
   Future<void> _downloadTemplate() async {
     final path = await XlsxImportService.generateTemplate();
     if (mounted) {
@@ -248,18 +273,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 Container(
                   padding: const EdgeInsets.only(top: 16),
                   decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.outlineVariant.withValues(alpha: 0.1)))),
-                  child: GestureDetector(onTap: _downloadTemplate,
-                    child: Row(children: [
-                      const Icon(Icons.download, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(language.downloadExcelTemplate, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                    ])),
+                  child: Column(children: [
+                    _buildExcelAction(Icons.download, language.downloadExcelTemplate, _downloadTemplate),
+                    const SizedBox(height: 12),
+                    _buildExcelAction(Icons.inventory_2_outlined, language.exportInventory, _exportInventory),
+                    const SizedBox(height: 12),
+                    _buildExcelAction(Icons.receipt_long, language.exportMovements, _exportMovements),
+                  ]),
                 ),
               ]),
             ),
             const SizedBox(height: 48),
           ]),
         )),
+      ]),
+    );
+  }
+
+
+  Widget _buildExcelAction(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary))),
       ]),
     );
   }

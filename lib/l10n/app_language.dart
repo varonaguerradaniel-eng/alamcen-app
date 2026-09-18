@@ -151,6 +151,16 @@ class AppLanguage extends ChangeNotifier {
   String get acceptedFormat => isSpanish ? 'FORMATO ACEPTADO' : 'ACCEPTED FORMAT';
   String get importXlsx => isSpanish ? 'Importar XLSX' : 'Import XLSX';
   String get downloadExcelTemplate => isSpanish ? 'Descargar plantilla Excel' : 'Download Excel Template';
+  String get exportInventory => isSpanish ? 'Exportar inventario' : 'Export Inventory';
+  String get exportMovements => isSpanish ? 'Exportar movimientos' : 'Export Movements';
+  String get movementDetails => isSpanish ? 'Detalle del movimiento' : 'Movement Details';
+  String get movementAction => isSpanish ? 'Que se hizo' : 'Action';
+  String get date => isSpanish ? 'Fecha' : 'Date';
+  String get time => isSpanish ? 'Hora' : 'Time';
+  String get barcode => isSpanish ? 'Codigo' : 'Barcode';
+  String get stockBefore => isSpanish ? 'Stock antes' : 'Stock Before';
+  String get stockAfter => isSpanish ? 'Stock despues' : 'Stock After';
+  String get note => isSpanish ? 'Nota' : 'Note';
   String get fractionError => isSpanish ? 'La cantidad no puede ser decimal' : 'Quantity cannot be fractional';
   String get validNumberError => isSpanish ? 'Ingrese un numero valido' : 'Enter a valid number';
   String get negativeQuantityError => isSpanish ? 'La cantidad no puede ser menor que cero' : 'Quantity cannot be less than zero';

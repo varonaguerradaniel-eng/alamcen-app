@@ -3,22 +3,30 @@ class StockMovement {
   int productId;
   String type; // 'mal_kabul', 'sevkiyat', 'sayim', 'fire_iade'
   int quantity;
+  int? stockBefore;
+  int? stockAfter;
   String? note;
   DateTime createdAt;
 
   // Joined fields (not stored in DB)
   String? productName;
   String? productBarcode;
+  String? productSpanishName;
+  String? productLocation;
 
   StockMovement({
     this.id,
     required this.productId,
     required this.type,
     required this.quantity,
+    this.stockBefore,
+    this.stockAfter,
     this.note,
     DateTime? createdAt,
     this.productName,
     this.productBarcode,
+    this.productSpanishName,
+    this.productLocation,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -27,6 +35,8 @@ class StockMovement {
       'product_id': productId,
       'type': type,
       'quantity': quantity,
+      'stock_before': stockBefore,
+      'stock_after': stockAfter,
       'note': note,
       'created_at': createdAt.toIso8601String(),
     };
@@ -38,10 +48,14 @@ class StockMovement {
       productId: (map['product_id'] as num).toInt(),
       type: map['type'] as String,
       quantity: (map['quantity'] as num).toInt(),
+      stockBefore: map['stock_before'] != null ? (map['stock_before'] as num).toInt() : null,
+      stockAfter: map['stock_after'] != null ? (map['stock_after'] as num).toInt() : null,
       note: map['note'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
       productName: map['product_name'] as String?,
       productBarcode: map['product_barcode'] as String?,
+      productSpanishName: map['product_spanish_name'] as String?,
+      productLocation: map['product_location'] as String?,
     );
   }
 
